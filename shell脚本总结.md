@@ -1,6 +1,6 @@
 # shell脚本总结
 
-#### 三剑客
+## 三剑客
 
 ##### （一）cut 列处理
 
@@ -18,3 +18,4 @@ xxxxx
 
 xxxxx
 
+![](C:\Users\Administrator\Desktop\1568689034(1).png)
