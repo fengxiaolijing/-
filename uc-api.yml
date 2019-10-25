@@ -1,0 +1,230 @@
+version: '3.7'
+services:
+############## mysql
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: uc123456
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 8g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "3306:3306"
+    volumes:
+      - /root/scripts/uc/mysql/tools/my.cnf:/etc/mysql/my.cnf
+      - /root/scripts/uc/mysql/packages:/var/lib/mysql
+########### redis
+  redis:
+    image: redis:1.0.1
+    environment:
+      requirepass: uc123456
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "6379:6379"
+    volumes:
+#      - /root/scripts/uc/redis/tools/redis.conf:/usr/local/etc/redis/redis.conf
+      - /root/scripts/uc/redis/packages:/data
+    configs:
+      - source: redis.conf   #docker config ls  已经存在的配置文件或是别名
+        target: /usr/local/etc/redis/redis.conf   # 容器内的配置文件名称
+
+##############  rabbit
+  rabbit:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: uc
+      RABBITMQ_DEFAULT_PASS: uc123456
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+##############  uc-api
+  api:
+    image: uc-api:1.0.1 
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8080:8080"
+    volumes:
+      - /root/scripts/uc/uc-api/logs/uc-api.log:/root/uc-api.log
+      - /root/scripts/uc/uc-api/packages/:/root/
+      - /root/scripts/uc/uc-api/tools/application-alpha.yml:/root/src/main/resources/application-alpha.yml
+      - /root/scripts/uc/uc-api/packages/pom.xml:/root/pom.xml
+    links:
+      - "mysql:mysql"
+      - "redis:redis"
+      - "rabbit:rabbit"
+###############  file-center
+  file:
+    image: k8s.harbor/base/centos:mvn
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8089:8089"
+    volumes:
+      - /root/scripts/uc/uc-file-center/packages/:/root/
+      - /root/scripts/uc/uc-file-center/tools/application-alpha.yml:/root/src/main/resources/application-alpha.yml
+      - /root/scripts/uc/uc-file-center/packages/pom.xml:/root/pom.xml
+      - /root/scripts/maven-sso/.m2:/root/.m2
+      - /root/scripts/uc/uc-file-center/tools/image:/home/work/image
+    command: ["mvn", "-P", "alpha", "clean", "package", "spring-boot:run"]
+    links:
+      - file:file
+      - api:api
+###################### uc-web
+  web:
+    image: uc-web:1.0.1
+#RUN yum install kde-l10n-Chinese -y
+#RUN yum install glibc-common -y
+#RUN localedef -c -f UTF-8 -i zh_CN zh_CN.utf8
+#ENV LC_ALL zh_CN.UTF-8
+    # as required
+    environment:
+      - LC_ALL=zh_CN.UTF-8
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8088:8088"
+    volumes:
+      - /root/scripts/uc/uc-web/packages/:/root/
+      - /root/scripts/uc/uc-web/tools/:/root/src/main/resources-alpha/
+    command: ["mvn", "-P", "alpha", "clean", "package", "tomcat7:run-war"]
+    links:
+    # public.properties 文件使用
+      - mysql:mysql
+      - redis:redis
+      - webapi:webapi
+      - web:uctest.tahoecndemo.com
+    # servlet-context.xml 文件使用
+      - sso:ucssotest.tahoecndemo.com
+###############  webapi
+  webapi:
+    image: ucweb-api:1.0.1
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8085:8085"
+    volumes:
+      - /root/scripts/uc/ucweb-api/packages/:/root/
+      - /root/scripts/uc/ucweb-api/tools/application-alpha.yml:/root/src/main/resources/application-alpha.yml
+    links:
+      - mysql:mysql
+      - redis:redis
+      - rabbit:rabbit
+      - file:file
+      - webapi:webapi
+################## sso
+  sso:
+    image: k8s.harbor/base/centos:mvn
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "9988:9988"
+    volumes:
+      - /root/scripts/uc/uc-sso-web/packages:/root/
+      - /root/scripts/uc/uc-sso-web/tools/public.properties:/root/src/main/resources-alpha/public.properties
+      - /root/scripts/uc/uc-sso-web/tools/servlet-context.xml:/root/src/main/resources-alpha/servlet-context.xml
+      - /root/scripts/maven-sso/.m2:/root/.m2
+    command: ["mvn", "-P", "alpha", "clean", "package", "tomcat7:run-war"]
+    links:
+    ##public.properties 使用别名
+      - redis:redis
+      - file:file
+      - api:ucapitest.tahoecndemo.com
+    ## servlet-context.xml  使用别名
+      - sso:ucssotest.tahoecndemo.com
+
+    
+
+configs:
+  redis.conf:
+    file: /root/data/redis.conf
