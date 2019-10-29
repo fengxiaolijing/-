@@ -222,9 +222,89 @@ services:
       - api:ucapitest.tahoecndemo.com
     ## servlet-context.xml  使用别名
       - sso:ucssotest.tahoecndemo.com
-
-    
-
+### canal-admin
+  canal-admin:
+    image: canal-admin:1.0.1
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure   
+    ports:
+      - "8888:8888"
+      - "11110:11110"
+    volumes:
+      - /root/scripts/uc/uc-canal-admin/packages/bin:/root/bin
+      - /root/scripts/uc/uc-canal-admin/packages/conf:/root/conf
+      - /root/scripts/uc/uc-canal-admin/packages/lib:/root/lib
+      - /root/scripts/uc/uc-canal-admin/packages/logs:/root/logs
+      - /root/scripts/uc/uc-canal-admin/tools/application.yml:/root/conf/application.yml
+      - /root/scripts/uc/uc-canal-admin/logs/admin.log:/root/logs/admin.log
+    links:
+      - mysql:mysql
+    #command: ["sh","/root/bin/startup.sh"]
+##### canal-serves
+  canal-server:
+    image: canal-server:1.0.1
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure   
+    ports:
+      - "11111:11111"
+    volumes:
+      - /root/scripts/uc/uc-canal-deploy/packages/bin:/root/bin
+      - /root/scripts/uc/uc-canal-deploy/packages/conf:/root/conf
+      - /root/scripts/uc/uc-canal-deploy/packages/lib:/root/lib
+      - /root/scripts/uc/uc-canal-deploy/packages/logs:/root/logs  
+      - /root/scripts/uc/uc-canal-deploy/tools/instance.properties:/root/conf/example/instance.properties
+      - /root/scripts/uc/uc-canal-deploy/packages/logs/example.log:/root/logs/example/example.log
+    links:
+      - mysql:mysql
+      
+##### uc-canal
+  canal:
+    image: uc-canal:1.0.1
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - /root/scripts/uc/uc-canal/packages/:/root/uc-canal/
+      - /root/scripts/uc/uc-canal/tools/public.properties:/root/uc-canal/src/main/resources/resources-alpha/public.properties
+      - /root/scripts/uc/uc-canal/packages/pom.xml:/root/uc-canal/pom.xml
+    links:
+      - rabbit:rabbit
+      - api:api
+      - canal-server:canal-server
+#    command: ["sh", "-x", "/root/uc-canal/target/uc-canal/bin/startup.sh"]    
+   
 configs:
   redis.conf:
     file: /root/data/redis.conf
