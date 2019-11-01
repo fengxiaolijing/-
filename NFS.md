@@ -82,7 +82,7 @@ umount 指定目录
 redis.conf  redis.yml  redis.yml.bak
 ```
 
-6验证
+## 6验证
 
 客户端查看
 
