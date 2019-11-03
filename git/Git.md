@@ -213,3 +213,95 @@ d34eedf HEAD@{9}: clone: from git@github.com:fengxiaolijing/shell.git
 git reset --hard ad16ea8
 ```
 
+### 2.4 阶段总结
+
+```
+git init #初始化
+git add   #添加代码
+git log  #查看版本
+git reflog #查看回退之前版本
+git reset --hard 版本号
+
+```
+
+切换三大区域代码  工作区  暂存区  版本区
+
+#### git 工作区域的回退   
+
+##### 例子1
+
+查看现在代码库的状态，目前的状态是没有文件需要更新
+
+```
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git status
+On branch master
+nothing to commit, working tree clean
+```
+
+新增加一个文件，再次检查git status发现变红色
+
+```
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git status
+On branch master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        test.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+这时想回到之前那个时候，不想要新建的文件了
+
+```
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git checkout
+```
+
+再查看文件夹下面的所有文件，新建的文件没有了，文件变成绿色的了
+
+```
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        new file:  
+        modified:   "\346\226\260\345\273\272\346\226\207\346\234\254\346\226\207\346\241\243.txt"
+```
+
+##### 例子2
+
+查看一个文件的状态是绿色的，修改文件，文件内容666，后变成红色，用git checkout --"文件名" 回退后发现文件内容666 没有了，文件状态是依然是绿色的。
+
+```
+
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        new file:   test.txt
+        modified:   "\346\226\260\345\273\272\346\226\207\346\234\254\346\226\207\346\241\243.txt"
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   test.txt
+
+
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git checkout -- test.txt
+
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        new file:   test.txt
+        modified:   "\346\226\260\345\273\272\346\226\207\346\234\254\346\226\207\346\241\243.txt"
+
+```
+
+
+
