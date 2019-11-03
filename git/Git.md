@@ -300,8 +300,54 @@ Changes to be committed:
   (use "git restore --staged <file>..." to unstage)
         new file:   test.txt
         modified:   "\346\226\260\345\273\272\346\226\207\346\234\254\346\226\207\346\241\243.txt"
+```
 
+#### git 暂存区回退到工作区
+
+##### 例子1
+
+写完代码添加到工作区，查看状态时绿色的状态，git reset HEAD -- "文件名" 将暂存区的代码回退到工作区，查看代码状态是红色的
+
+```
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git add .
+
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        new file:   test.txt
+        new file:   "\345\244\264\345\203\217.jpg"
+        modified:   "\346\226\260\345\273\272\346\226\207\346\234\254\346\226\207\346\241\243.txt"
+
+
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git reset HEAD -- 头像.jpg
+
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git status
+On branch master
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        new file:   test.txt
+        modified:   "\346\226\260\345\273\272\346\226\207\346\234\254\346\226\207\346\241\243.txt"
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        "\345\244\264\345\203\217.jpg"
+
+
+Administrator@PC-201907020238 MINGW64 ~/Desktop/新建文件夹 (master)
+$ git checkout
+A       test.txt
+M       "\346\226\260\345\273\272\346\226\207\346\234\254\346\226\207\346\241\243.txt"
 ```
 
 
 
+学到 第9章
+
+https://www.bilibili.com/video/av70229191/?p=9
