@@ -1,0 +1,80 @@
+---
+- hosts: HRSAPnginxtest
+  gather_facts: no
+  vars:
+    nginx_home: /opt/nginx
+  tasks: 
+     #杀死服务判断
+     # O  K
+     - name: check nginx running status...
+       shell: ps -ef | grep nginx | grep -v grep | wc -l
+       register: nginx_process_count
+     - debug:
+       msg: "nginx_process_count is {{nginx_process_count.stdout}}"
+     - name: shutdown nginx process pid...
+       #shell: kill -KILL $(ps -ef | grep fk-api | grep -v grep | awk '{print $2}')
+       #shell: /opt/nginx/bin/nginx -s stop
+       shell: pkill nginx
+       when: nginx_process_count.stdout > "0"
+
+
+
+     #OK
+     - name: file html
+       shell: rm -rf {{ nginx_home }}/html/{{ item }}*
+       with_items:
+         - ehr-web/
+         - ehr-external-web/
+         - ehr-mobile/
+
+
+ 
+      #  O  K
+     #同步tar 到目标服务器
+     - name: transfer tar package to workspace...
+       synchronize: src={{ item }} dest={{ nginx_home }}/devops/
+       with_fileglob:
+         - /deploy/21HRSAPnginxtest/new_deploy/*.tar
+         
+  
+  
+     #   O  K     
+     #解压到目标路径
+     - name: decompress tar package to workspace...
+       unarchive: src={{ nginx_home }}/devops/{{ item.key }} dest={{ nginx_home }}/html/{{ item.value }} copy=no
+       with_items:
+         - { key: "ehr-web.tar", value: "ehr-web"}
+         - { key: "ehr-external-web.tar", value: "ehr-external-web"}
+         - { key: "ehr-mobile.tar", value: "ehr-mobile"} 
+
+
+
+      #    O K
+      #同步配置文件
+     - name: decompress tar package to workspace...
+       synchronize: src=/deploy/21HRSAPnginxtest/conf/{{ item.key }} dest={{ nginx_home }}/{{ item.value }}
+       with_items:
+         - { key: "ehr-external-web/profile.js", value: "html/ehr-external-web/js/profile.js"}
+         - { key: "ehr-mobile/config.js", value: "html/ehr-mobile/js/config.js"}    
+
+
+
+     #   O  K
+     #启动nginx服务
+     - name: startup nginx service...
+       shell: /opt/nginx/bin/nginx
+       register: nginx_service
+     - debug:
+        msg: "{{ nginx_service }}"
+     - name: wait for nginx_service port 8090 runing..
+       wait_for:
+        port: 8090
+        delay: 20
+       register: nginx_status
+     - debug:
+        msg: "nginx service is {{ nginx_status.state }}"
+       failed_when: nginx_status.state != "started"
+       
+     
+
+

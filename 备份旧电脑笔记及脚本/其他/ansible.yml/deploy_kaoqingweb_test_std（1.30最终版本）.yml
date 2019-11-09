@@ -1,0 +1,112 @@
+---
+- hosts: 10kaoqinwebtest
+  gather_facts: no 
+  vars:
+    java_home: /usr/local/tomcat8800/
+  tasks: 
+    - name: test connection
+      ping:
+    - name: copy startup and shutdown scripts
+      copy: src={{ item.source }} dest={{ item.target }} mode=0655
+      with_items:
+        - { source: "/deploy/10kaoqingwebtest/startup_java_8800.sh", target: "{{ java_home }}" }
+        - { source: "/deploy/10kaoqingwebtest/shutdown_java.sh", target: "{{ java_home }}" }
+
+    - name: shutdown service
+      command: /bin/sh /usr/local/tomcat8800/shutdown_java.sh
+     #删除文件
+     #删除war应用目录
+    #- name: delete webapps target directory 
+    #  file: path={{ item.source }} state=absent
+    #  with_items:
+    #    - { source: "{{ java_home }}webapps/platform" }
+    #    - { source: "{{ java_home }}webapps/report" }
+    #    - { source: "{{ java_home }}webapps/taiheattendance" }
+    #    - { source: "{{ java_home }}webapps/mobilecard" }
+    #    - { source: "{{ java_home }}webapps/hrca" }
+    #    - { source: "{{ java_home }}webapps/reports" }
+    #    - { source: "{{ java_home }}webapps/kqcalender" }
+    #    - { source: "{{ java_home }}webapps/webapp" }
+    #执行脚本
+    - name: startup service
+      command: /usr/local/tomcat8800/qingchu.sh
+        
+    - name: delete webapps tar and war package
+      file: path={{ item }} state=absent
+      with_fileglob:
+        - "{{ java_home }}tar/h5kq-web.tar"
+        - "{{ java_home }}tar/kqcalender-web.tar"
+        - "{{ java_home }}tar/reports-web.tar"
+        - "{{ java_home }}tar/web.tar"
+        - "{{ java_home }}war/mobilecard-0.0.1-SNAPSHOT.war"
+        - "{{ java_home }}war/platform-0.0.1-SNAPSHOT.war"
+        - "{{ java_home }}war/report-0.0.1-SNAPSHOT.war"
+        - "{{ java_home }}war/taiheattendance-0.0.1-SNAPSHOT.war"
+      
+     #复制tar包
+    - name: copy tar files to target directory
+      copy: src={{ item }} dest={{ java_home }}webapps/tar/
+      with_fileglob:
+        - /deploy/10kaoqingwebtest/new_deploy/*.tar
+        
+     #复制war包
+    - name: copy war files to target directory
+      copy: src={{ item }} dest={{ java_home }}webapps/war/
+      with_fileglob:
+        - /deploy/10kaoqingwebtest/new_deploy/*.war
+    
+     #解压war包
+    #- name: unzip war package
+    #  command: unzip -oq {{ item.source }} -d {{ java_home }}webapps/war/ &&
+     # with_items:
+      #  - { source: "{{ java_home }}webapps/war/platform-0.0.1-SNAPSHOT.war" }
+      #  - { source: "{{ java_home }}webapps/war/report-0.0.1-SNAPSHOT.war" }
+       # - { source: "{{ java_home }}webapps/war/taiheattendance-0.0.1-SNAPSHOT.war" }
+       # - { source: "{{ java_home }}webapps/war/mobilecard-0.0.1-SNAPSHOT.war" }
+      #解压war包
+    - name: unzip war file
+      command: /usr/bin/unzip -oq {{ java_home }}webapps/war/platform-0.0.1-SNAPSHOT.war -d {{ java_home }}webapps/platform
+    - name: unzip war file
+      command: /usr/bin/unzip -oq {{ java_home }}webapps/war/report-0.0.1-SNAPSHOT.war -d {{ java_home }}webapps/report
+    - name: unzip war file
+      command: /usr/bin/unzip -oq {{ java_home }}webapps/war/taiheattendance-0.0.1-SNAPSHOT.war -d {{ java_home }}webapps/taiheattendance
+    - name: unzip war file
+      command: /usr/bin/unzip -oq {{ java_home }}webapps/war/mobilecard-0.0.1-SNAPSHOT.war -d {{ java_home }}webapps/mobilecard
+ 
+     #解压tar包
+    - name: unzip war file
+      command: /usr/bin/tar xf {{ item.source }} -C {{ java_home }}webapps/tar/
+      with_items:
+        - { source: "{{ java_home }}webapps/tar/h5kq-web.tar" }
+        - { source: "{{ java_home }}webapps/tar/kqcalender-web.tar" }
+        - { source: "{{ java_home }}webapps/tar/reports-web.tar" }
+        - { source: "{{ java_home }}webapps/tar/web.tar" }
+   
+   
+    #执行脚本  复制tar包到应用目录
+    - name: tar service mv
+      command: /usr/local/tomcat8800/mv.sh
+ 
+     #配置文件 
+    - name: copy config file
+      copy: src={{ item.source }} dest=/usr/local/tomcat8800/webapps/ 
+      with_items:
+        - { source: "/deploy/10kaoqingwebtest/conf/mobilecard" }
+        - { source: "/deploy/10kaoqingwebtest/conf/platform" }
+        - { source: "/deploy/10kaoqingwebtest/conf/report" }
+        - { source: "/deploy/10kaoqingwebtest/conf/taiheattendance" }
+
+    - name: delete file
+      file: path={{ item }} state=absent
+      with_items:
+        - { source: "{{ java_home }}webapps/war/mobilecard-0.0.1-SNAPSHOT.war" }
+        - { source: "{{ java_home }}webapps/war/report-0.0.1-SNAPSHOT.war" }
+        - { source: "{{ java_home }}webapps/war/platform-0.0.1-SNAPSHOT.war" }
+        - { source: "{{ java_home }}webapps/war/taiheattendance-0.0.1-SNAPSHOT.war" }
+        - { source: "{{ java_home }}work/Catalina" }
+
+      #执行脚本
+    - name: startup service
+      command: /usr/local/tomcat8800/startup_java_8800.sh
+      register: std_result
+      changed_when: std_result|success

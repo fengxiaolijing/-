@@ -1,0 +1,87 @@
+---
+- hosts: 10kaoqindk
+  gather_facts: no
+  vars:
+    tomcat_home: /usr/local/apache-tomcat-9.0.10/
+  tasks: 
+     - name: test connection
+       ping:
+     - name: copy start file
+       copy: src={{ item.source }} dest={{ item.target }} mode=0655
+       with_items:
+        - { source: "/deploy/10kaoqingweb/startup_java_8800.sh", target: "{{ tomcat_home }}" }
+        - { source: "/deploy/10kaoqingweb/shutdown_java.sh", target: "{{ tomcat_home }}" }
+
+    - name: shutdown service
+      command: /bin/sh /usr/local/apache-tomcat-9.0.10/shutdown_java.sh
+    
+      #执行脚本
+    - name:  delete app
+      command: /usr/local/apache-tomcat-9.0.10/qingchu.sh
+    
+      #删除war包和tar包    
+    - name: delete webapps tar and war package
+      file: path={{ item }} state=absent
+      with_fileglob:
+        - "{{ tomcat_home }}tar/reports-web.tar"
+        - "{{ tomcat_home }}tar/kqcalender-web.tar"
+        - "{{ tomcat_home }}tar/web.tar"
+        - "{{ tomcat_home }}war/platform-0.0.1-SNAPSHOT.war"
+        - "{{ tomcat_home }}war/report-0.0.1-SNAPSHOT.war"
+        - "{{ tomcat_home }}war/taiheattendance-0.0.1-SNAPSHOT.war"
+    
+     #复制tar包
+    - name: copy tar files to target directory
+      copy: src={{ item }} dest={{ tomcat_home }}webapps/tar/
+      with_fileglob:
+        - /deploy/10kaoqingweb/new_deploy/*.tar
+
+     #复制war包
+    - name: copy war files to target directory
+      copy: src={{ item }} dest={{ tomcat_home }}webapps/war/
+      with_fileglob:
+        - /deploy/10kaoqingweb/new_deploy/*.war
+
+     #解压tar包
+    - name: unzip war file
+      command: /usr/bin/tar xf {{ item.source }} -C {{ tomcat_home }}webapps/tar/
+      with_items:
+        - { source: "{{ tomcat_home }}webapps/tar/reports-web.tar" }
+        - { source: "{{ tomcat_home }}webapps/tar/kqcalender-web.tar" }
+        - { source: "{{ tomcat_home }}webapps/tar/web.tar" }
+        
+    #解压war包 
+    - name: unzip war file
+      command: /usr/bin/unzip -oq {{ tomcat_home }}webapps/war/platform-0.0.1-SNAPSHOT.war -d {{ tomcat_home }}webapps/platform
+
+    - name: unzip war file
+      command: /usr/bin/unzip -oq {{ tomcat_home }}webapps/war/report-0.0.1-SNAPSHOT.war -d {{ tomcat_home }}webapps/report
+
+    - name: unzip war file
+      command: /usr/bin/unzip -oq {{ tomcat_home }}webapps/war/taiheattendance-0.0.1-SNAPSHOT.war -d {{ tomcat_home }}webapps/taiheattendance
+
+    #执行脚本  复制tar包到应用目录
+    - name: tar service mv
+      command: /usr/local/apache-tomcat-9.0.10/mv.sh
+
+    #配置文件
+    - name: copy config file
+      copy: src={{ item.source }} dest=/usr/local/apache-tomcat-9.0.10/webapps/
+      with_items:
+        - { source: "/deploy/10kaoqingwebtest/conf/report" }
+        - { source: "/deploy/10kaoqingwebtest/conf/taiheattendance" }  
+        - { source: "/deploy/10kaoqingwebtest/conf/platform/" }
+ 
+    - name: delete file
+      file: path={{ item.source }} state=absent
+      with_items:
+        - { source: "{{ tomcat_home }}webapps/war/platform-0.0.1-SNAPSHOT.war" }
+        - { source: "{{ tomcat_home }}webapps/war/report-0.0.1-SNAPSHOT.war" }
+        - { source: "{{ tomcat_home }}webapps/war/taiheattendance-0.0.1-SNAPSHOT.war" }
+        - { source: "{{ tomcat_home }}work/Catalina" }
+
+    #执行脚本
+    - name: startup service
+      command: /usr/local/apache-tomcat-9.0.10/startup_java_8800.sh
+      register: std_result
+      changed_when: std_result|success
