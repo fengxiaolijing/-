@@ -1,0 +1,108 @@
+项目背景:
+	海云捷讯公司要在10台服务器上部署相同的apache服务，以形成集群，共同协调完成公司业务处理，提高业务响应能力与速度。
+
+前提：完成与10台服务器的ssh无密钥登录
+要求：
+	1）请编写安装apache的脚本	：要求在脚本的最后关闭防火墙和selinux，否则可能测试时不成功
+		apache主页为welcome to hyjx
+	2）请编写监控apache服务的脚本：要求监控apache服务，若不开启则开启并邮件报警
+	4）请编写备份网站根目录的脚本：要求备份网站根目录，备份不成功则邮件报警
+	5）请编写批量部署的脚本
+		将以上脚本分发到后台的10台服务器上，并编写执行安装脚本，编写计划任务每隔五分钟监控apache状态，
+		每天晚上1点备份网站根目录
+注意：
+	1）编写脚本时先提取变量
+	2）凡是到的目录都需要判断是否存在，不存在则创建
+	3）监控服务时可用“service 服务名 status ”结合$?一起使用
+	4）备份目录时用tar 打包
+	5）邮件报警时，正文格式为“HH:MM XX服务器的SS服务down，请及时处理”，其中HH:MM为时间分钟，XX为服务器ip地址，SS为服务名称
+	6)关闭防火墙时建议使用
+	iptables -F
+	iptables -P INPUT DROP
+	iptables -P FORWARD DROP
+	iptables -P OUTPUT ACCEPT	
+	service iptables save
+	注意:以上内容可在前提部分完成 
+	iptables -A INPUT -p tcp --dport 端口号 -j ACCEPT
+	
+
+实验步骤：
+一、实现无密钥登录
+1.ssh-keygen
+2.scp /root/.ssh/id_rsa.pub root@ip:/root/.ssh/authorized_keys
+
+二、编写脚本
+1.编写安装脚本install_httpd.sh
+#!/bin/bash
+yum -y install httpd
+sed -i 's/^Listen .*/Listen 80/' /etc/httpd/conf/httpd.conf
+echo "welcome to hyjx">/var/www/html/index.html
+service httpd restart
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+
+2.编写监控apache脚本monitor_httpd.sh
+#!/bin/bash
+time=`date +%H:%M`
+ip=`ifconfig eth0|grep "inet addr"|awk -F: '{print $2}'|awk '{print $1}'`
+mail_subject="httpd down"
+mail_body="$time $ip服务器的httpd服务down，请及时处理"
+mail_to=root
+service httpd status&>/dev/null
+if [ $? -gt 0 ];then
+	service httpd start
+	echo $mail_body|mail -s $mail_subject $mail_to
+fi
+
+3.编写备份网站根目录的脚本backup_httpd.sh
+#!/bin/bash
+time=`date +%H:%M`
+ip=`ifconfig eth0|grep "inet addr"|awk -F: '{print $2}'|awk '{print $1}'`
+backdir=/backup/httpd/
+if [ ! -d $backdir ];then
+	mkdir -p $backdir
+fi
+
+mail_subject="备份失败"
+mail_body="$time $ip服务器的网站根目录备份失败，请及时处理"
+mail_to=root
+tar -czvf $backdir/www.tar.gz /var/www/html&>/dev/null
+if [ $? -gt 0 ];then
+	echo $mail_body|mail -s $mail_subject $mail_to
+fi
+
+
+
+4.批量部署
+vim iplist
+192.168.197.126
+192.168.197.127
+192.168.197.128
+192.168.197.129
+192.168.197.130
+192.168.197.131
+192.168.197.122
+192.168.197.133
+192.168.197.134
+192.168.197.135
+
+vim plbs.sh
+#!/bin/bash
+for ip in `cat iplist`
+do
+	scp install_httpd.sh root@$ip:/root
+	scp monitor_httpd.sh root@$ip:/root
+	scp backup_httpd.sh root@$ip:/root
+	ssh $ip sh /root/install_httpd.sh
+	echo "*/5 * * * * root sh /root/monitor_httpd.sh">>/etc/crontab
+	echo "00 01 * * * root sh /root/backup_httpd.sh">>/etc/crontab
+done
+
+
+5.测试
+http://192.168.197.126
+
+
+
+	
+	
+	
